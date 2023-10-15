@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+	<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+	<style>
+		* {
+			padding: 0;
+			margin: 0;
+			box-sizing: border-box;
+		}
+
+		.app-top {
+			padding-top: 20px;
+		}
+
+		.app-main {
+			display: flex;
+			justify-content: center;
+			align-items: start;
+			gap: 50px;
+		}
+
+		.app-dancers {
+			border: 1px solid red;
+			padding: 30px;
+			display: flex;
+			flex-direction: column;
+			gap: 30px;
+		}
+
+		.app-dancers__title {
+			text-align: center;
+			font-size: 25px;
+		}
+
+		.app-dancers__list {
+			text-align: center;
+			align-items: center;
+		}
+
+		.app-dancers__item {
+			list-style: none;
+			text-align: center;
+			font-size: 20px;
+			cursor: pointer;
+			padding: 15px;
+		}
+
+		.app-dancers__item:not(:last-child) {
+			margin-bottom: 50px;
+		}
+
+		.app-dancers__btn {
+			margin: 0 auto;
+			display: flex;
+			justify-content: center;
+			margin-top: 20px;
+			padding: 10px;
+			cursor: pointer;
+		}
+
+		.dancer-selected {
+			border: 2px solid blue;
+		}
+
+		.app-bottom {
+			padding: 30px 0;
+			justify-content: center;
+			margin: 0 auto;
+			align-items: start;
+			gap: 50px;
+			max-width: 300px;
+		}
+
+		.app-pairs__item {
+			display: flex;
+			align-items: baseline;
+			justify-content: center;
+		}
+
+		.app-pairs {
+			border: 1px solid red;
+			padding: 30px;
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			text-align: center;
+			gap: 30px;
+		}
+
+		/*===========================================================================================*/
+
+		#app2 {
+			padding: 30px 0;
+		}
+
+		.app2-filters {
+			display: flex;
+			justify-content: center;
+			gap: 30px;
+		}
+
+		.app2-lists {
+			margin-top: 20px;
+			text-align: center;
+		}
+
+		.clear-filters {
+			display: flex;
+			justify-content: center;
+			margin: 20px auto 0;
+		}
+	</style>
+</head>
+
+<body>
+	<div id="app">
+		<div class="app-top">
+			<div class="app-main">
+				<div class="app-dancers">
+					<h3 class="app-dancers__title">Хлопці</h3>
+					<ul class="app-dancers__list">
+						<li class="app-dancers__item" :class="{ 'dancer-selected': m.isChosen }"
+							v-for="(m, index) in maleDancersList" :key="m.id" @click="maleDancerChosen(index)">
+							<h6>{{ m.name }}</h6>
+						</li>
+					</ul>
+				</div>
+				<div class="app-dancers">
+					<h3 class="app-dancers__title">Дівчата</h3>
+					<ul class="app-dancers__list">
+						<li class="app-dancers__item" :class="{ 'dancer-selected': f.isChosen }"
+							v-for="(f, index) in femaleDancersList" :key="f.id" @click="femaleDancerChosen(index)">
+							<h6>{{ f.name }}</h6>
+						</li>
+					</ul>
+				</div>
+			</div>
+			<button :disabled="!isPairChosen" class="app-dancers__btn" @click="addDancePair">Додати</button>
+		</div>
+		<div class="app-bottom">
+			<div class="app-pairs">
+				<h3 class="app-dancers__title">Обрані Пари</h3>
+				<ul class="app-dancers__list">
+					<li class="app-dancers__item app-pairs__item" :class="{
+							'dancer-selected':p.isChosen,
+						}" v-for="(p, index) in readyPairsList" :key="index" @click="selectReadyPair(index)">
+						<h6>{{p.maleDancer}}</h6> - <h6>{{p.femaleDancer}}</h6>
+						<button class="app-dancers__btn" @click="deleteReadyPair(index)"
+							v-if="p.isChosen">Видалити</button>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+	<hr>
+	<div id="app2">
+		<div class="app2-filters">
+			<div class="app2-filter">
+				<h3 class="app2-filter-title">Марка</h3>
+				<select v-model="selectCarBrand" class="app2-filter-select">
+					<option v-for="brand in carBrands" :key="brand" :value="brand">{{brand}}</option>
+				</select>
+			</div>
+			<div class="app2-filter">
+				<h3 class="app2-filter-title">Рік Випуску</h3>
+				<select v-model="selectCarYear" class="app2-filter-select">
+					<option v-for="year in carYears" :key="year" :value="year">{{year}}</option>
+				</select>
+			</div>
+		</div>
+		<div class="app2-lists">
+			<h3 class="app2-lists-title">Список</h3>
+			<ul v-if="filterCar.length" class="app2-list">
+				<li class="app2-list-item" v-for="(car, index) in filterCar" :key="car.id">
+					{{car.brand}} - {{car.year}}р. - {{car.price}}$
+				</li>
+			</ul>
+			<div v-else>Машини такої марки та року немає</div>
+		</div>
+		<button class="clear-filters" @click="clearFilters">Clear Filters</button>
+	</div>
+
+	<script>
+		const { createApp } = Vue
+
+		const app = createApp({
+			data() {
+				return {
+					maleDancersList: [
+						{
+							id: 1,
+							name: 'Данило',
+							isChosen: false,
+						},
+						{
+							id: 2,
+							name: 'Марк',
+							isChosen: false,
+						},
+						{
+							id: 3,
+							name: 'Василь',
+							isChosen: false,
+						},
+						{
+							id: 4,
+							name: 'Іван',
+							isChosen: false,
+						},
+						{
+							id: 5,
+							name: 'Мирослав',
+							isChosen: false,
+						},
+					],
+					femaleDancersList: [
+						{
+							id: 1,
+							name: 'Даніелла',
+							isChosen: false,
+						},
+						{
+							id: 2,
+							name: 'Марина',
+							isChosen: false,
+						},
+						{
+							id: 3,
+							name: 'Васелина',
+							isChosen: false,
+						},
+						{
+							id: 4,
+							name: 'Іванка',
+							isChosen: false,
+						},
+						{
+							id: 5,
+							name: 'Магдалина',
+							isChosen: false,
+						},
+					],
+					readyPairsList: [
+						{
+							id: 1,
+							maleDancer: 'Vitalii',
+							femaleDancer: 'Tetyana',
+							isChosen: false,
+						},
+					],
+
+				}
+			},
+			methods: {
+				femaleDancerChosen(index) {
+					this.femaleDancersList.forEach((dancer) => {
+						dancer.isChosen = false;
+					});
+					this.femaleDancersList[index].isChosen = true;
+				},
+				maleDancerChosen(index) {
+					this.maleDancersList.forEach((dancer) => {
+						dancer.isChosen = false;
+					});
+					this.maleDancersList[index].isChosen = true;
+				},
+				selectReadyPair(index) {
+					this.readyPairsList.forEach((dancer) => {
+						dancer.isChosen = false;
+					});
+					this.readyPairsList[index].isChosen = true;
+				},
+				addDancePair() {
+					let selectedMaleDancer = this.maleDancersList.find(dancer => dancer.isChosen);
+					let selectedFemaleDancer = this.femaleDancersList.find(dancer => dancer.isChosen);
+
+					if (selectedFemaleDancer && selectedMaleDancer) {
+						let newPair = {
+							id: this.readyPairsList.length + 1,
+							maleDancer: selectedMaleDancer.name,
+							femaleDancer: selectedFemaleDancer.name,
+							isChosen: false,
+						};
+						this.readyPairsList.push(newPair);
+
+						this.maleDancersList = this.maleDancersList.filter(dancer => dancer.id !== selectedMaleDancer.id);
+						this.femaleDancersList = this.femaleDancersList.filter(dancer => dancer.id !== selectedFemaleDancer.id);
+
+						this.maleDancersList.forEach(dancer => (dancer.isChosen = false));
+						this.femaleDancersList.forEach(dancer => (dancer.isChosen = false));
+					}
+				},
+				deleteReadyPair(index) {
+					this.readyPairsList.splice(index, 1);
+				},
+			},
+			computed: {
+				isPairChosen() {
+					return this.maleDancersList.some(dancer => dancer.isChosen) && this.femaleDancersList.some(dancer => dancer.isChosen);
+				},
+			},
+		}).mount("#app");
+
+		const app2 = createApp({
+			data() {
+				return {
+					selectCarBrand: null,
+					selectCarYear: null,
+					carList: [
+						{
+							brand: 'Mercedes',
+							year: 2018,
+							price: 25000,
+						},
+						{
+							brand: 'Opel',
+							year: 2000,
+							price: 5000,
+						},
+						{
+							brand: 'Opel',
+							year: 2004,
+							price: 15000,
+						},
+						{
+							brand: 'Audi',
+							year: 2000,
+							price: 7000,
+						},
+						{
+							brand: 'BMW',
+							year: 2010,
+							price: 9000,
+						},
+						{
+							brand: 'Porsche',
+							year: 1940,
+							price: 7000000,
+						},
+					],
+					carBrands: ["Audi", "Opel", "Mercedes", "BMW", "Porsche"],
+					carYears: [2000, 2004, 2018, 2010, 1940],
+				}
+			},
+			methods: {
+				clearFilters() {
+					this.selectCarBrand = null;
+					this.selectCarYear = null;
+				},
+				getCarBrands() {
+					return [...new Set(this.carList.map(car => car.brand))];
+				},
+				getCarYears() {
+					return [...new Set(this.carList.map(car => car.year))];
+				},
+			},
+			computed: {
+				filterCar() {
+					console.log("selectCarBrand:", this.selectCarBrand);
+					console.log("selectCarYear:", this.selectCarYear);
+					if (this.selectCarBrand && this.selectCarYear) {
+						return this.carList.filter((car) => {
+							return car.brand === this.selectCarBrand && car.year === parseInt(this.selectCarYear)
+						});
+					} else if (this.selectCarBrand) {
+						return this.carList.filter((car) => {
+							return car.brand === this.selectCarBrand
+						});
+					} else if (this.selectCarYear) {
+						return this.carList.filter((car) => {
+							return car.year === parseInt(this.selectCarYear);
+						});
+					} else {
+						return this.carList
+					}
+				},
+			},
+		}).mount("#app2");
+	</script>
+</body>
+
+</html>
